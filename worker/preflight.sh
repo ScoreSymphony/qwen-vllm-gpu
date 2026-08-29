@@ -17,6 +17,7 @@ TARGET_DIR="${TARGET_DIR:-$HOME/scoresymphony-workspace/scoresymphony-infrastruc
 OPENAI_API_KEY="${OPENAI_API_KEY:-local-vllm}"
 OPENAI_BASE_URL="${OPENAI_BASE_URL:-http://127.0.0.1:8000/v1}"
 OPENAI_MODEL="${OPENAI_MODEL:-Qwen3-Coder-Next-FP8}"
+VLLM_READY_TIMEOUT_SECONDS="${VLLM_READY_TIMEOUT_SECONDS:-3600}"
 
 for cmd in curl git qwen nvidia-smi docker; do
   command -v "$cmd" >/dev/null 2>&1 || {
@@ -54,17 +55,19 @@ current_branch="$(git -C "$TARGET_DIR" branch --show-current)"
 }
 
 health_url="${OPENAI_BASE_URL%/v1}/health"
-printf 'Waiting for vLLM health endpoint: %s\n' "$health_url"
-for _ in $(seq 1 180); do
+printf 'Waiting for vLLM health endpoint: %s (timeout=%ss)\n' "$health_url" "$VLLM_READY_TIMEOUT_SECONDS"
+start_epoch="$(date +%s)"
+while true; do
   if curl -fsS --max-time 5 "$health_url" >/dev/null 2>&1; then
     break
   fi
+  now_epoch="$(date +%s)"
+  if (( now_epoch - start_epoch >= VLLM_READY_TIMEOUT_SECONDS )); then
+    echo "PRECHECK FAIL: vLLM health endpoint did not become ready within ${VLLM_READY_TIMEOUT_SECONDS}s" >&2
+    exit 1
+  fi
   sleep 5
 done
-curl -fsS --max-time 10 "$health_url" >/dev/null || {
-  echo "PRECHECK FAIL: vLLM health endpoint is not ready" >&2
-  exit 1
-}
 
 models_json="$(curl -fsS --max-time 20 \
   -H "Authorization: Bearer $OPENAI_API_KEY" \
