@@ -68,6 +68,20 @@ http://127.0.0.1:8000
 
 The loopback binding is deliberate. The deployment does not expose vLLM publicly by default.
 
+## Monitoring
+
+The repository includes lightweight host-side monitoring under `monitoring/` for the paid GPU pilot. It records GPU utilization, VRAM, temperature, power, clocks, CPU/RAM/disk pressure, vLLM metrics and the vLLM container log.
+
+Start it on the GPU host before the actual coding workload:
+
+```bash
+./monitoring/run-monitoring.sh
+```
+
+The default sample interval is 5 seconds. Every run is written to its own directory below `monitoring/logs/`; these runtime logs are ignored by Git.
+
+See [`monitoring/README.md`](monitoring/README.md) for fields, overrides and output layout.
+
 ## Persistent volumes
 
 The Compose project creates two named volumes:
