@@ -4,7 +4,15 @@ Minimal Docker Compose deployment for **Qwen3-Coder-Next-FP8** with **vLLM** on 
 
 ## Intended use
 
-This repository is designed to be imported directly into a Docker/Compose manager such as Hostinger.
+This repository is the **GPU inference side only**. It is designed to be imported directly into a Docker/Compose manager such as Hostinger.
+
+The coding worker remains on the normal VPS and works directly in:
+
+```text
+/srv/scoresymphony-infrastructure
+```
+
+The normal VPS connects to this GPU-side vLLM API through an SSH tunnel. No second checkout of `scoresymphony-infrastructure` is required on the GPU host.
 
 The model weights are **not stored in GitHub**. On the first start, vLLM downloads the pinned Hugging Face model automatically:
 
@@ -22,7 +30,7 @@ The Hugging Face cache is stored in a named Docker volume (`hf-cache`), so conta
 
 ## Baseline
 
-- Model: `Qwen/Qwen3-Coder-Next-FP8`
+- Model: `Qwen3-Coder-Next-FP8`
 - vLLM image: `vllm/vllm-openai:v0.28.0-cu129-ubuntu2404`
 - Single NVIDIA GPU / tensor parallel size 1
 - Initial context length: 32768 tokens
@@ -32,9 +40,26 @@ The Hugging Face cache is stored in a named Docker volume (`hf-cache`), so conta
 - Chunked prefill enabled
 - Automatic tool choice enabled
 - Tool parser: `qwen3_coder`
-- API bound only to host loopback: `127.0.0.1:8000`
+- API bound only to GPU-host loopback: `127.0.0.1:8000`
 
-The current baseline is intended for a single 96 GB NVIDIA RTX PRO 6000 Blackwell-class GPU. Tune memory/context settings only after the first successful model load.
+Tune memory/context settings only after the first successful model load.
+
+## Architecture
+
+```text
+Normal VPS
+/srv/scoresymphony-infrastructure
+        |
+        | Qwen Code / coding worker
+        | OpenAI-compatible API over SSH tunnel
+        v
+GPU host 127.0.0.1:8000
+        |
+        v
+vLLM -> Qwen3-Coder-Next-FP8
+```
+
+The vLLM port is intentionally not exposed publicly. The VPS-side tunnel can later bind a local port such as `127.0.0.1:8000` to the GPU host's `127.0.0.1:8000`.
 
 ## Deploy
 
@@ -60,13 +85,11 @@ Follow image/model loading:
 docker compose logs -f vllm
 ```
 
-Once healthy, the local OpenAI-compatible API is available on:
+Once healthy, the GPU-local OpenAI-compatible API is available on:
 
 ```text
 http://127.0.0.1:8000
 ```
-
-The loopback binding is deliberate. The deployment does not expose vLLM publicly by default.
 
 ## Monitoring
 
@@ -82,20 +105,6 @@ The default sample interval is 5 seconds. Every run is written to its own direct
 
 See [`monitoring/README.md`](monitoring/README.md) for fields, overrides and output layout.
 
-## Qwen Code worker
-
-The `worker/` directory prepares the actual coding agent. It installs Qwen Code if necessary, clones the private `ScoreSymphony/ScoreSymphony-Agent-VPS` repository, validates the local vLLM endpoint and then executes `TASKS/README.md` through TASK-001 → TASK-007 in headless autonomous mode.
-
-After creating `worker/.env` from the example and setting the repository-scoped GitHub token, the complete pilot is started with:
-
-```bash
-bash worker/run-pilot.sh
-```
-
-`run-pilot.sh` starts monitoring first, bootstraps the worker, performs a real vLLM preflight, runs the task chain, and preserves both Qwen and performance evidence under per-run log directories.
-
-See [`worker/README.md`](worker/README.md) for the exact preparation and execution flow.
-
 ## Persistent volumes
 
 The Compose project creates two named volumes:
@@ -104,3 +113,7 @@ The Compose project creates two named volumes:
 - `vllm-cache` — vLLM compile/runtime cache
 
 Do not delete `hf-cache` during an ordinary redeploy if you want to avoid downloading the model again on the same host.
+
+## Scope boundary
+
+This repository does **not** contain Qwen Code, the coding worker, GitHub credentials or a clone of `scoresymphony-infrastructure`. Those belong on the normal VPS, where the existing repository and TASKS are already available.
