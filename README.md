@@ -17,15 +17,18 @@ You can override that host path with `QWEN_MODEL_PATH`.
 ## Baseline
 
 - Model: `Qwen3-Coder-Next-FP8`
-- vLLM image: `vllm/vllm-openai:v0.28.0-ubuntu2404`
-- Single GPU / tensor parallel size 1
+- vLLM image: `vllm/vllm-openai:v0.28.0-cu129-ubuntu2404`
+- Single NVIDIA GPU / tensor parallel size 1
 - Initial context length: 32768 tokens
 - GPU memory utilization: 0.90
 - FP8 KV cache
 - Prefix caching enabled
+- Chunked prefill enabled
 - Automatic tool choice enabled
 - Tool parser: `qwen3_coder`
 - API bound only to host loopback: `127.0.0.1:8000`
+
+The current baseline is intended for a single 96 GB NVIDIA RTX PRO 6000 Blackwell-class GPU. Tune memory/context settings only after the first successful model load.
 
 ## Model preparation
 
