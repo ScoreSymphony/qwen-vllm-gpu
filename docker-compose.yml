@@ -8,7 +8,7 @@ services:
     stop_grace_period: 60s
 
     volumes:
-      - ${QWEN_MODEL_PATH:-/models/Qwen3-Coder-Next-FP8}:/model:ro
+      - hf-cache:/root/.cache/huggingface
       - vllm-cache:/root/.cache/vllm
 
     ports:
@@ -16,7 +16,9 @@ services:
 
     command:
       - --model
-      - /model
+      - Qwen/Qwen3-Coder-Next-FP8
+      - --revision
+      - da6e2ed27304dd39abadd9c82ef50e8de67bdd4c
       - --served-model-name
       - Qwen3-Coder-Next-FP8
       - --host
@@ -44,8 +46,9 @@ services:
           python3 -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"
       interval: 15s
       timeout: 10s
-      retries: 80
-      start_period: 120s
+      retries: 120
+      start_period: 180s
 
 volumes:
+  hf-cache:
   vllm-cache:
