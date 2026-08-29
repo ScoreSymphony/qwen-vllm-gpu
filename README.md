@@ -75,12 +75,26 @@ The repository includes lightweight host-side monitoring under `monitoring/` for
 Start it on the GPU host before the actual coding workload:
 
 ```bash
-./monitoring/run-monitoring.sh
+bash monitoring/run-monitoring.sh
 ```
 
 The default sample interval is 5 seconds. Every run is written to its own directory below `monitoring/logs/`; these runtime logs are ignored by Git.
 
 See [`monitoring/README.md`](monitoring/README.md) for fields, overrides and output layout.
+
+## Qwen Code worker
+
+The `worker/` directory prepares the actual coding agent. It installs Qwen Code if necessary, clones the private `ScoreSymphony/ScoreSymphony-Agent-VPS` repository, validates the local vLLM endpoint and then executes `TASKS/README.md` through TASK-001 → TASK-007 in headless autonomous mode.
+
+After creating `worker/.env` from the example and setting the repository-scoped GitHub token, the complete pilot is started with:
+
+```bash
+bash worker/run-pilot.sh
+```
+
+`run-pilot.sh` starts monitoring first, bootstraps the worker, performs a real vLLM preflight, runs the task chain, and preserves both Qwen and performance evidence under per-run log directories.
+
+See [`worker/README.md`](worker/README.md) for the exact preparation and execution flow.
 
 ## Persistent volumes
 
