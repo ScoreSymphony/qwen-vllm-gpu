@@ -3,9 +3,17 @@ services:
     image: vllm/vllm-openai:v0.28.0-cu129-ubuntu2404
     container_name: scoresymphony-qwen-vllm
     restart: unless-stopped
-    gpus: all
     ipc: host
     stop_grace_period: 60s
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities:
+                - gpu
 
     volumes:
       - hf-cache:/root/.cache/huggingface
